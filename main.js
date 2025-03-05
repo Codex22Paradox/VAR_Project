@@ -11,12 +11,10 @@ const VIDEO_DEVICE = process.env.VIDEO_DEVICE || (isWindows ? 'video=USB Video D
 const OUTPUT_DIR = path.join(__dirname, 'recordings');
 const BUFFER_FILE = isWindows ? 'C:\\temp\\video_buffer.mp4' : '/dev/shm/video_buffer.mp4';
 
-if (!fs.existsSync(OUTPUT_DIR)) {
-    fs.mkdirSync(OUTPUT_DIR, {recursive: true});
-}
-if (isWindows && !fs.existsSync('C:\\temp')) {
-    fs.mkdirSync('C:\\temp');
-}
+if (!fs.existsSync(OUTPUT_DIR)) fs.mkdirSync(OUTPUT_DIR, {recursive: true});
+
+if (isWindows && !fs.existsSync('C:\\temp')) fs.mkdirSync('C:\\temp');
+
 
 ffmpeg.setFfmpegPath(ffmpegStatic);
 
