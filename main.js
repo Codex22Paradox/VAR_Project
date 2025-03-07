@@ -1,52 +1,24 @@
-const ffmpeg = require('fluent-ffmpeg');
-const ffmpegStatic = require('ffmpeg-static');
-const fs = require('fs');
-const path = require('path');
+import {createRequire} from "module";
 
-const BUFFER_DURATION = 60; // Buffer di 60 secondi
-const isWindows = process.platform === 'win32';
+const require = createRequire(import.meta.url);
+const express = require('express');
+const {ffmpegModule} = require('./function/ffmpegFunction');
+const app = express();
+const port = 3000;
 
-// Imposta il nome del dispositivo dinamicamente per avviare il programma devo:
-const VIDEO_DEVICE = process.env.VIDEO_DEVICE || (isWindows ? 'video=USB Video Device' : '/dev/video0');
-const OUTPUT_DIR = path.join(__dirname, 'recordings');
-const BUFFER_FILE = isWindows ? 'C:\\temp\\video_buffer.mp4' : '/dev/shm/video_buffer.mp4';
+// Avvia la registrazione quando il server si avvia
 
-if (!fs.existsSync(OUTPUT_DIR)) fs.mkdirSync(OUTPUT_DIR, {recursive: true});
+await ffmpegModule.startRecording();
 
-if (isWindows && !fs.existsSync('C:\\temp')) fs.mkdirSync('C:\\temp');
+app.get('/save-last-minute', async (req, res) => {
+    try {
+        await ffmpegModule.saveLastMinute();
+        res.status(200).json({message: 'Salvataggio dell\'ultimo minuto completato.'});
+    } catch (err) {
+        res.status(500).json({message: 'Errore durante il salvataggio dell\'ultimo minuto.', error: err.message});
+    }
+});
 
-
-ffmpeg.setFfmpegPath(ffmpegStatic);
-
-//Buffer in RAM per massima ottimizzazione
-const ffmpegProcess = ffmpeg()
-    .input(VIDEO_DEVICE)
-    .inputFormat(isWindows ? 'dshow' : 'v4l2')
-    .videoCodec('libx264')
-    .videoBitrate(8000) // Bitrate impostato a 8 Mbps
-    .outputOptions('-preset ultrafast')
-    .duration(BUFFER_DURATION)
-    .on('error', (err) => {
-        console.error('Errore nell\'avvio di FFmpeg:', err);
-    })
-    .on('end', () => {
-        console.log('FFmpeg ha terminato la registrazione nel buffer.');
-    })
-    .save(BUFFER_FILE);
-
-console.log(`FFmpeg sta registrando in RAM con dispositivo: ${VIDEO_DEVICE}`);
-
-function saveLastMinute() {
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const outputFile = path.join(OUTPUT_DIR, `recording-${timestamp}.mp4`);
-
-    console.log(`Salvataggio dell'ultimo minuto in ${outputFile}...`);
-    fs.copyFile(BUFFER_FILE, outputFile, (err) => {
-        if (err) {
-            console.error('Errore durante il salvataggio del video:', err);
-        } else {
-            console.log('Salvataggio completato!');
-        }
-    });
-}
-
+app.listen(port, () => {
+    console.log(`Server in ascolto su http://localhost:${port}`);
+});

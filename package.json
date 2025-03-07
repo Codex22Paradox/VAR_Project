@@ -1,5 +1,6 @@
 {
   "name": "var_project",
+  "type": "module",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -12,6 +13,7 @@
   },
   "private": true,
   "devDependencies": {
+    "express": "^4.21.2",
     "ffmpeg-static": "^5.2.0",
     "fluent-ffmpeg": "^2.1.3"
   }
