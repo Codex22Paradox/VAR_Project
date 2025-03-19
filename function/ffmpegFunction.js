@@ -37,13 +37,7 @@ export const ffmpegModule = {
                     .inputFormat(isWindows ? 'dshow' : 'v4l2')
                     .videoCodec('libx264')
                     .videoBitrate(8000)
-                    .outputOptions([
-                        '-preset ultrafast',
-                        '-tune zerolatency',
-                        '-profile:v baseline',
-                        '-level 3.0',
-                        '-pix_fmt yuv420p'
-                    ])
+                    .outputOptions(['-preset ultrafast', '-tune zerolatency', '-profile:v baseline', '-level 3.0', '-pix_fmt yuv420p'])
                     .duration(SEGMENT_DURATION)
                     .on('error', (err) => {
                         console.error('Errore nell\'avvio di FFmpeg:', err);
@@ -66,8 +60,7 @@ export const ffmpegModule = {
         };
 
         recordLoop();
-    },
-    saveLastMinute: async () => {
+    }, saveLastMinute: async () => {
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
         const outputFile = path.join(OUTPUT_DIR, `recording-${timestamp}.mp4`);
         console.log(`Salvataggio dell'ultimo minuto in ${outputFile}...`);
@@ -85,10 +78,15 @@ export const ffmpegModule = {
                 }
             }
 
+            // Crea un file di testo con l'elenco dei file da concatenare
+            const concatFilePath = path.join(TEMP_DIR, 'concat_list.txt');
+            const concatFileContent = filesToConcat.map(file => `file '${file}'`).join('\n');
+            await fsPromises.writeFile(concatFilePath, concatFileContent);
+
             await new Promise((resolve, reject) => {
                 ffmpeg()
-                    .inputOptions('-safe 0')
-                    .input(`concat:${filesToConcat.join('|')}`)
+                    .input(concatFilePath)
+                    .inputOptions('-f concat', '-safe 0')
                     .outputOptions('-c copy')
                     .on('error', (err) => {
                         console.error('Errore durante la concatenazione dei segmenti:', err);
