@@ -78,6 +78,13 @@ export const ffmpegModule = {
                 filesToConcat.push(segmentFiles[index]);
             }
 
+            // Verifica che tutti i file esistano
+            for (const file of filesToConcat) {
+                if (!fs.existsSync(file)) {
+                    throw new Error(`File non trovato: ${file}`);
+                }
+            }
+
             await new Promise((resolve, reject) => {
                 ffmpeg()
                     .input(`concat:${filesToConcat.join('|')}`)
