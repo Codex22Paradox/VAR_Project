@@ -11,30 +11,33 @@ const ffmpegStatic = require('ffmpeg-static');
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const BUFFER_DURATION = 60; // Buffer di 60 secondi
+const SEGMENT_DURATION = 10; // Durata di ogni segmento in secondi
+const NUM_SEGMENTS = 6; // Numero di segmenti per coprire 60 secondi
 const isWindows = process.platform === 'win32';
 
-// Imposta il nome del dispositivo dinamicamente per avviare il programma devo:
 const VIDEO_DEVICE = process.env.VIDEO_DEVICE || (isWindows ? 'video=NomeDelTuoDispositivo' : '/dev/video0');
 const OUTPUT_DIR = path.join(__dirname, 'recordings');
-const BUFFER_FILE = isWindows ? 'C:\\temp\\video_buffer.mp4' : '/dev/shm/video_buffer.mp4';
+const TEMP_DIR = isWindows ? 'C:\\temp' : '/dev/shm';
 
 if (!fs.existsSync(OUTPUT_DIR)) fs.mkdirSync(OUTPUT_DIR, {recursive: true});
-
-if (isWindows && !fs.existsSync('C:\\temp')) fs.mkdirSync('C:\\temp');
+if (isWindows && !fs.existsSync(TEMP_DIR)) fs.mkdirSync(TEMP_DIR);
 
 ffmpeg.setFfmpegPath(ffmpegStatic);
+
+let segmentIndex = 0;
+let segmentsRecorded = 0;
+const segmentFiles = Array(NUM_SEGMENTS).fill(null).map((_, i) => path.join(TEMP_DIR, `segment_${i}.mp4`));
 
 export const ffmpegModule = {
     startRecording: async function () {
         try {
-            const recordBuffer = () => {
+            const recordSegment = (index) => {
                 return new Promise((resolve, reject) => {
                     ffmpeg()
                         .input(VIDEO_DEVICE)
                         .inputFormat(isWindows ? 'dshow' : 'v4l2')
                         .videoCodec('libx264')
-                        .videoBitrate(8000) // Bitrate impostato a 8 Mbps
+                        .videoBitrate(8000)
                         .outputOptions([
                             '-preset ultrafast',
                             '-tune zerolatency',
@@ -42,21 +45,23 @@ export const ffmpegModule = {
                             '-level 3.0',
                             '-pix_fmt yuv420p'
                         ])
-                        .duration(BUFFER_DURATION)
+                        .duration(SEGMENT_DURATION)
                         .on('error', (err) => {
                             console.error('Errore nell\'avvio di FFmpeg:', err);
                             reject(err);
                         })
                         .on('end', () => {
-                            console.log('FFmpeg ha terminato la registrazione nel buffer.');
+                            console.log(`FFmpeg ha terminato la registrazione del segmento ${index}.`);
                             resolve();
                         })
-                        .save(BUFFER_FILE);
+                        .save(segmentFiles[index]);
                 });
             };
 
             while (true) {
-                await recordBuffer();
+                await recordSegment(segmentIndex);
+                segmentIndex = (segmentIndex + 1) % NUM_SEGMENTS;
+                segmentsRecorded++;
             }
         } catch (err) {
             console.error('Errore durante la registrazione:', err);
@@ -67,7 +72,28 @@ export const ffmpegModule = {
         const outputFile = path.join(OUTPUT_DIR, `recording-${timestamp}.mp4`);
         console.log(`Salvataggio dell'ultimo minuto in ${outputFile}...`);
         try {
-            await fsPromises.copyFile(BUFFER_FILE, outputFile);
+            const filesToConcat = [];
+            for (let i = 0; i < Math.min(NUM_SEGMENTS, segmentsRecorded); i++) {
+                const index = (segmentIndex + i) % NUM_SEGMENTS;
+                filesToConcat.push(segmentFiles[index]);
+            }
+
+            await new Promise((resolve, reject) => {
+                ffmpeg()
+                    .input(`concat:${filesToConcat.join('|')}`)
+                    .inputOptions('-safe 0')
+                    .outputOptions('-c copy')
+                    .on('error', (err) => {
+                        console.error('Errore durante la concatenazione dei segmenti:', err);
+                        reject(err);
+                    })
+                    .on('end', () => {
+                        console.log('Concatenazione completata!');
+                        resolve();
+                    })
+                    .save(outputFile);
+            });
+
             console.log('Salvataggio completato!');
         } catch (err) {
             console.error('Errore durante il salvataggio del video:', err);
