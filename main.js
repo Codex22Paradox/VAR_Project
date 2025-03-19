@@ -1,9 +1,9 @@
 import express from 'express';
 import http from 'http';
-import { fileURLToPath } from 'url';
+import {fileURLToPath} from 'url';
 import path from 'path';
 import bodyParser from 'body-parser';
-import { ffmpegModule } from './function/ffmpegFunction.js';
+import {ffmpegModule} from './function/ffmpegFunction.js';
 
 const app = express();
 const port = 3000;
@@ -23,10 +23,17 @@ await ffmpegModule.startRecording();
 
 app.get('/save-last-minute', async (req, res) => {
     try {
-        await ffmpegModule.saveLastMinute();
-        res.status(200).json({ message: 'Salvataggio dell\'ultimo minuto completato.' });
+        const savedFilePath = await ffmpegModule.saveLastMinute();
+        res.status(200).json({
+            message: 'Salvataggio dell\'ultimo minuto completato.',
+            filePath: savedFilePath
+        });
     } catch (err) {
-        res.status(500).json({ message: 'Errore durante il salvataggio dell\'ultimo minuto.', error: err.message });
+        console.error('Errore API save-last-minute:', err);
+        res.status(500).json({
+            message: 'Errore durante il salvataggio dell\'ultimo minuto.',
+            error: err.message
+        });
     }
 });
 
