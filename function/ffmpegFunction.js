@@ -86,7 +86,7 @@ export const ffmpegModule = {
             await new Promise((resolve, reject) => {
                 ffmpeg()
                     .input(concatFilePath)
-                    .inputOptions('-f concat', '-safe 0')
+                    .inputOptions(['-safe 0', '-f concat'])
                     .outputOptions('-c copy')
                     .on('error', (err) => {
                         console.error('Errore durante la concatenazione dei segmenti:', err);
