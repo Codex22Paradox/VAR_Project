@@ -34,12 +34,7 @@ export const ffmpegModule = {
                     .inputFormat(isWindows ? 'dshow' : 'v4l2')
                     .videoCodec('libx264')
                     .videoBitrate(8000) // Bitrate impostato a 8 Mbps
-                    .outputOptions(
-                        '-preset ultrafast',
-                        '-tune zerolatency',  // Riduce la latenza e migliora la fluidità
-                        '-pix_fmt yuv420p',   // Aumenta la compatibilità
-                        '-crf 23'             // Controllo qualità costante per ridurre scatti
-                    )
+                    .outputOptions(['-preset veryfast', '-tune zerolatency', '-pix_fmt yuv420p', '-crf 23'])
                     .duration(BUFFER_DURATION)
                     .on('error', (err) => {
                         console.error('Errore nell\'avvio di FFmpeg:', err);
