@@ -30,42 +30,42 @@ const segmentFiles = Array(NUM_SEGMENTS).fill(null).map((_, i) => path.join(TEMP
 
 export const ffmpegModule = {
     startRecording: async function () {
-        try {
-            const recordSegment = (index) => {
-                return new Promise((resolve, reject) => {
-                    ffmpeg()
-                        .input(VIDEO_DEVICE)
-                        .inputFormat(isWindows ? 'dshow' : 'v4l2')
-                        .videoCodec('libx264')
-                        .videoBitrate(8000)
-                        .outputOptions([
-                            '-preset ultrafast',
-                            '-tune zerolatency',
-                            '-profile:v baseline',
-                            '-level 3.0',
-                            '-pix_fmt yuv420p'
-                        ])
-                        .duration(SEGMENT_DURATION)
-                        .on('error', (err) => {
-                            console.error('Errore nell\'avvio di FFmpeg:', err);
-                            reject(err);
-                        })
-                        .on('end', () => {
-                            console.log(`FFmpeg ha terminato la registrazione del segmento ${index}.`);
-                            resolve();
-                        })
-                        .save(segmentFiles[index]);
-                });
-            };
+        const recordSegment = (index) => {
+            return new Promise((resolve, reject) => {
+                ffmpeg()
+                    .input(VIDEO_DEVICE)
+                    .inputFormat(isWindows ? 'dshow' : 'v4l2')
+                    .videoCodec('libx264')
+                    .videoBitrate(8000)
+                    .outputOptions([
+                        '-preset ultrafast',
+                        '-tune zerolatency',
+                        '-profile:v baseline',
+                        '-level 3.0',
+                        '-pix_fmt yuv420p'
+                    ])
+                    .duration(SEGMENT_DURATION)
+                    .on('error', (err) => {
+                        console.error('Errore nell\'avvio di FFmpeg:', err);
+                        reject(err);
+                    })
+                    .on('end', () => {
+                        console.log(`FFmpeg ha terminato la registrazione del segmento ${index}.`);
+                        resolve();
+                    })
+                    .save(segmentFiles[index]);
+            });
+        };
 
+        const recordLoop = async () => {
             while (true) {
                 await recordSegment(segmentIndex);
                 segmentIndex = (segmentIndex + 1) % NUM_SEGMENTS;
                 segmentsRecorded++;
             }
-        } catch (err) {
-            console.error('Errore durante la registrazione:', err);
-        }
+        };
+
+        recordLoop();
     },
     saveLastMinute: async () => {
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');

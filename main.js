@@ -18,8 +18,8 @@ app.use(
 );
 app.use("/", express.static(path.join(__dirname, "public")));
 
-// Avvia la registrazione quando il server si avvia
-await ffmpegModule.startRecording();
+// Avvia la registrazione in background quando il server si avvia
+ffmpegModule.startRecording();
 
 app.get('/save-last-minute', async (req, res) => {
     try {
@@ -29,7 +29,6 @@ app.get('/save-last-minute', async (req, res) => {
         res.status(500).json({ message: 'Errore durante il salvataggio dell\'ultimo minuto.', error: err.message });
     }
 });
-
 
 app.listen(port, () => {
     console.log(`Server in ascolto su http://localhost:${port}`);
