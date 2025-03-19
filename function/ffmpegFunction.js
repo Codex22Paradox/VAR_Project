@@ -34,7 +34,13 @@ export const ffmpegModule = {
                     .inputFormat(isWindows ? 'dshow' : 'v4l2')
                     .videoCodec('libx264')
                     .videoBitrate(8000) // Bitrate impostato a 8 Mbps
-                    .outputOptions(['-preset veryfast', '-tune zerolatency', '-pix_fmt yuv420p', '-crf 23'])
+                    .outputOptions([
+                        '-preset ultrafast',
+                        '-tune zerolatency',
+                        '-profile:v baseline',
+                        '-level 3.0',
+                        '-pix_fmt yuv420p'
+                    ])
                     .duration(BUFFER_DURATION)
                     .on('error', (err) => {
                         console.error('Errore nell\'avvio di FFmpeg:', err);
@@ -52,7 +58,6 @@ export const ffmpegModule = {
             console.error('Errore durante la registrazione:', err);
         }
     },
-
     saveLastMinute: async () => {
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
         const outputFile = path.join(OUTPUT_DIR, `recording-${timestamp}.mp4`);
