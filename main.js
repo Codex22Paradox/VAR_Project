@@ -45,7 +45,7 @@ app.get('/cleanup-and-stop', async (req, res) => {
 })
 const server = app.listen(port, async () => {
     console.log(`Server in ascolto su http://localhost:${port}`);
-    //await ffmpegModule.startRecording();
+    await ffmpegModule.startRecording();
     setTimeout(() => {
         kioskFunction.launchBrowserInKioskMode(port);
     }, 1000);
