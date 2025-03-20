@@ -25,9 +25,7 @@ const SEGMENT_PATTERN = path.join(BUFFER_DIR, 'segment%03d.mp4');
 // Assicurati che le directory necessarie esistano
 if (!fs.existsSync(OUTPUT_DIR)) fs.mkdirSync(OUTPUT_DIR, {recursive: true});
 if (!fs.existsSync(BUFFER_DIR)) fs.mkdirSync(BUFFER_DIR, {recursive: true});
-
 ffmpeg.setFfmpegPath(ffmpegStatic);
-
 let ffmpegProcess = null;
 let isRecording = false;
 let segmentCreationTimes = new Map(); // Traccia quando è stato creato ogni segmento
@@ -38,16 +36,10 @@ export const ffmpegModule = {
             console.log('La registrazione è già in corso.');
             return;
         }
-
         try {
-            // Pulisci i vecchi segmenti e resetta il tracker
             await cleanupSegments();
             segmentCreationTimes.clear();
-
-            // Imposta opzioni di encoding migliorate per ridurre il carico e migliorare la fluidità
             const hwAccel = isWindows ? ['-hwaccel auto'] : [];
-
-            // Avvia la registrazione continua con segmenti
             return new Promise((resolve, reject) => {
                 const process = ffmpeg()
                     .input(VIDEO_DEVICE)
@@ -75,10 +67,7 @@ export const ffmpegModule = {
                         console.log(`FFmpeg sta registrando in segmenti con dispositivo: ${VIDEO_DEVICE}`);
                         ffmpegProcess = process;
                         isRecording = true;
-
-                        // Configura un watcher per tracciare i nuovi segmenti
                         setupSegmentWatcher();
-
                         resolve();
                     })
                     .on('error', (err) => {
@@ -110,23 +99,14 @@ export const ffmpegModule = {
         const listFile = path.join(BUFFER_DIR, 'filelist.txt');
 
         try {
-            // Ottieni solo i segmenti degli ultimi 60 secondi
             const segments = await getLastMinuteSegments();
-
-            if (segments.length === 0) {
+            if (segments.length === 0)
                 throw new Error('Nessun segmento disponibile per il salvataggio');
-            }
-
             console.log(`Trovati ${segments.length} segmenti da unire (max 60 secondi)`);
-
-            // Crea un file di lista per la concatenazione
             const fileContent = segments.map(file =>
                 `file '${path.join(BUFFER_DIR, file).replace(/\\/g, '/')}'`
             ).join('\n');
-
             await fsPromises.writeFile(listFile, fileContent);
-
-            // Concatena i segmenti in un unico file
             await new Promise((resolve, reject) => {
                 ffmpeg()
                     .input(listFile)
@@ -139,14 +119,12 @@ export const ffmpegModule = {
                     .on('error', reject)
                     .save(outputFile);
             });
-
             console.log(`Salvataggio completato in ${outputFile}!`);
             return outputFile;
         } catch (err) {
             console.error('Errore durante il salvataggio del video:', err);
             throw err;
         } finally {
-            // Pulizia del file di lista
             if (fs.existsSync(listFile)) {
                 await fsPromises.unlink(listFile).catch(() => {
                 });
@@ -190,9 +168,7 @@ export const ffmpegModule = {
         }
     }
 };
-
-// Funzione per tracciare quando i segmenti vengono creati
-function setupSegmentWatcher() {
+const setupSegmentWatcher = () => {
     const watcher = fs.watch(BUFFER_DIR, (eventType, filename) => {
         if (eventType === 'rename' && filename && filename.startsWith('segment') && filename.endsWith('.mp4')) {
             // Quando un nuovo file viene creato, tieni traccia dell'ora
@@ -206,9 +182,7 @@ function setupSegmentWatcher() {
         ffmpegProcess.on('error', () => watcher.close());
     }
 }
-
-// Ottieni solo i segmenti degli ultimi 60 secondi
-async function getLastMinuteSegments() {
+const getLastMinuteSegments = async () => {
     const now = Date.now();
     const cutoffTime = now - (BUFFER_DURATION * 1000);
 
@@ -243,9 +217,7 @@ async function getLastMinuteSegments() {
             return numA - numB;
         });
 }
-
-// Pulisci tutti i vecchi segmenti
-async function cleanupSegments() {
+const cleanupSegments = async () => {
     try {
         const files = await fsPromises.readdir(BUFFER_DIR).catch(() => []);
         for (const file of files) {
@@ -259,14 +231,12 @@ async function cleanupSegments() {
     }
 }
 
-// Gestione della terminazione pulita
 process.on('exit', () => {
     if (ffmpegProcess) {
         ffmpegProcess.kill('SIGKILL');
     }
 });
 
-// Gestione di segnali di terminazione
 ['SIGINT', 'SIGTERM', 'SIGQUIT'].forEach(signal => {
     process.on(signal, () => {
         if (ffmpegProcess) {
