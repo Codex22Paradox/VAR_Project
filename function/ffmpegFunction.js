@@ -164,6 +164,30 @@ export const ffmpegModule = {
         } else {
             console.log('Nessuna registrazione attiva da interrompere.');
         }
+    },
+
+    cleanupAndStop: async function () {
+        try {
+            // Stop the ffmpeg recording if active
+            if (ffmpegProcess) {
+                ffmpegProcess.kill('SIGKILL');
+                ffmpegProcess = null;
+                isRecording = false;
+                console.log('Registrazione interrotta.');
+            } else {
+                console.log('Nessuna registrazione attiva da interrompere.');
+            }
+            // Clear segment tracking
+            segmentCreationTimes.clear();
+
+            // Clean up segment files
+            await cleanupSegments();
+
+            return {success: true, message: 'Registrazione interrotta e buffer puliti.'};
+        } catch (err) {
+            console.error('Errore durante la pulizia e l\'arresto:', err);
+            throw err;
+        }
     }
 };
 
